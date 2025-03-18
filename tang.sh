@@ -1,12 +1,27 @@
 #!/bin/bash
 
-# 定义变量
+# 提示用户输入用户名和密码
+echo "请输入HTTP和SOCKS5代理的用户名："
+read USERNAME
+
+# 确保用户名非空
+if [ -z "$USERNAME" ]; then
+    echo "用户名不能为空，程序退出。"
+    exit 1
+fi
+
+echo "请输入HTTP和SOCKS5代理的密码："
+read -s PASSWORD
+
+# 确保密码非空
+if [ -z "$PASSWORD" ]; then
+    echo "密码不能为空，程序退出。"
+    exit 1
+fi
+
+# 定义端口
 HTTP_PORT=59394
 SOCKS5_PORT=59395
-HTTP_USER="tang"
-HTTP_PASSWD="tang88888888."
-SOCKS5_USER="tang"
-SOCKS5_PASSWD="tang88888888."
 
 # 检查是否为root用户
 if [ "$EUID" -ne 0 ]; then
@@ -58,7 +73,7 @@ install_http() {
     fi
 
     # 生成Squid密码文件
-    htpasswd -bc /etc/squid/passwd "$HTTP_USER" "$HTTP_PASSWD"
+    htpasswd -bc /etc/squid/passwd "$USERNAME" "$PASSWORD"
 
     # 写入Squid配置文件
     cat <<EOF >/etc/squid/squid.conf
@@ -110,7 +125,7 @@ EOF
     systemctl restart squid
     systemctl enable squid
     if systemctl is-active squid >/dev/null 2>&1; then
-        echo "Squid已成功启动，监听端口：$HTTP_PORT，用户：$HTTP_USER，密码：$HTTP_PASSWD"
+        echo "Squid已成功启动，监听端口：$HTTP_PORT，用户：$USERNAME，密码：$PASSWORD"
     else
         echo "Squid启动失败，请检查日志：/var/log/squid/"
         exit 1
@@ -149,14 +164,14 @@ pass {
 EOF
 
     # 设置用户认证
-    echo "$SOCKS5_USER:$SOCKS5_PASSWD" > /etc/passwd-sockd
+    echo "$USERNAME:$PASSWORD" > /etc/passwd-sockd
     chmod 600 /etc/passwd-sockd
 
     # 启动Dante服务
     systemctl restart sockd
     systemctl enable sockd
     if systemctl is-active sockd >/dev/null 2>&1; then
-        echo "Dante已成功启动，监听端口：$SOCKS5_PORT，用户：$SOCKS5_USER，密码：$SOCKS5_PASSWD"
+        echo "Dante已成功启动，监听端口：$SOCKS5_PORT，用户：$USERNAME，密码：$PASSWORD"
     else
         echo "Dante启动失败，请检查日志：/var/log/sockd.log"
         exit 1
@@ -183,8 +198,8 @@ main() {
     install_http
     install_socks5
     echo "部署完成！"
-    echo "HTTP代理：154.26.189.56:$HTTP_PORT (用户：$HTTP_USER 密码：$HTTP_PASSWD)"
-    echo "SOCKS5代理：154.26.189.56:$SOCKS5_PORT (用户：$SOCKS5_USER 密码：$SOCKS5_PASSWD)"
+    echo "HTTP代理：154.26.189.56:$HTTP_PORT (用户：$USERNAME 密码：$PASSWORD)"
+    echo "SOCKS5代理：154.26.189.56:$SOCKS5_PORT (用户：$USERNAME 密码：$PASSWORD)"
     echo "防火墙已启用，只开放端口：22（SSH，可选）、$HTTP_PORT、$SOCKS5_PORT"
     echo "请确保DMIT安全组已开放端口 $HTTP_PORT 和 $SOCKS5_PORT"
 }
