@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 提示用户输入用户名和密码
-echo "请输入HTTP和SOCKS5代理的用户名："
+echo "请输入HTTP代理的用户名："
 read USERNAME
 
 # 确保用户名非空
@@ -10,7 +10,7 @@ if [ -z "$USERNAME" ]; then
     exit 1
 fi
 
-echo "请输入HTTP和SOCKS5代理的密码："
+echo "请输入HTTP代理的密码："
 read -s PASSWORD
 
 # 确保密码非空
@@ -20,8 +20,16 @@ if [ -z "$PASSWORD" ]; then
 fi
 
 # 定义端口
-HTTP_PORT=59394
-SOCKS5_PORT=59395
+HTTP_PORT=56666
+
+# 获取 VPS 的外部 IP 地址
+VPS_IP=$(hostname -I | awk '{print $1}')
+
+# 检查是否能够获取到IP
+if [ -z "$VPS_IP" ]; then
+    echo "无法获取到IP地址，程序退出。"
+    exit 1
+fi
 
 # 检查是否为root用户
 if [ "$EUID" -ne 0 ]; then
@@ -52,7 +60,6 @@ configure_firewall() {
 
     # 只开放必要的端口
     firewall-cmd --permanent --zone=public --add-port=$HTTP_PORT/tcp
-    firewall-cmd --permanent --zone=public --add-port=$SOCKS5_PORT/tcp
 
     # 可选：如果需要SSH管理，保留22端口
     firewall-cmd --permanent --zone=public --add-port=22/tcp
@@ -60,7 +67,7 @@ configure_firewall() {
     # 应用规则
     firewall-cmd --reload
 
-    echo "防火墙已配置，只开放端口：22（SSH，可选）、$HTTP_PORT（HTTP）、$SOCKS5_PORT（SOCKS5）"
+    echo "防火墙已配置，只开放端口：22（SSH，可选）、$HTTP_PORT（HTTP）"
 }
 
 # 安装并配置Squid（HTTP代理，带认证）
@@ -132,65 +139,24 @@ EOF
     fi
 }
 
-# 安装并配置Shadowsocks（SOCKS5代理）
-install_socks5() {
-    echo "安装Shadowsocks SOCKS5代理..."
-    yum install -y epel-release
-    yum install -y shadowsocks
-
-    if [ $? -ne 0 ]; then
-        echo "Shadowsocks安装失败，请检查网络或yum源"
-        exit 1
-    fi
-
-    # 写入Shadowsocks配置文件
-    cat <<EOF >/etc/shadowsocks.json
-{
-    "server": "0.0.0.0",
-    "server_port": $SOCKS5_PORT,
-    "local_address": "127.0.0.1",
-    "local_port": 1080,
-    "password": "$PASSWORD",
-    "timeout": 300,
-    "method": "aes-256-cfb"
-}
-EOF
-
-    # 启动Shadowsocks服务
-    systemctl restart shadowsocks
-    systemctl enable shadowsocks
-    if systemctl is-active shadowsocks >/dev/null 2>&1; then
-        echo "Shadowsocks已成功启动，监听端口：$SOCKS5_PORT，用户：$USERNAME，密码：$PASSWORD"
-    else
-        echo "Shadowsocks启动失败，请检查日志：/var/log/shadowsocks/"
-        exit 1
-    fi
-}
-
 # 检查端口是否被占用
 check_ports() {
     if netstat -tuln | grep -q ":$HTTP_PORT "; then
         echo "端口 $HTTP_PORT 已被占用，请更换端口或释放该端口"
         exit 1
     fi
-    if netstat -tuln | grep -q ":$SOCKS5_PORT "; then
-        echo "端口 $SOCKS5_PORT 已被占用，请更换端口或释放该端口"
-        exit 1
-    fi
 }
 
 # 主函数
 main() {
-    echo "开始部署HTTP和SOCKS5代理服务..."
+    echo "开始部署HTTP代理服务..."
     check_ports
     configure_firewall
     install_http
-    install_socks5
     echo "部署完成！"
-    echo "HTTP代理：154.26.189.56:$HTTP_PORT (用户：$USERNAME 密码：$PASSWORD)"
-    echo "SOCKS5代理：154.26.189.56:$SOCKS5_PORT (用户：$USERNAME 密码：$PASSWORD)"
-    echo "防火墙已启用，只开放端口：22（SSH，可选）、$HTTP_PORT、$SOCKS5_PORT"
-    echo "请确保DMIT安全组已开放端口 $HTTP_PORT 和 $SOCKS5_PORT"
+    echo "HTTP代理：$VPS_IP:$HTTP_PORT (用户：$USERNAME 密码：$PASSWORD)"
+    echo "防火墙已启用，只开放端口：22（SSH，可选）、$HTTP_PORT"
+    echo "请确保DMIT安全组已开放端口 $HTTP_PORT"
 }
 
 main
