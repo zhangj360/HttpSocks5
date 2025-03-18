@@ -132,48 +132,37 @@ EOF
     fi
 }
 
-# 安装并配置Dante（SOCKS5代理）
+# 安装并配置Shadowsocks（SOCKS5代理）
 install_socks5() {
-    echo "安装Dante SOCKS5代理..."
-    yum install -y dante-server
+    echo "安装Shadowsocks SOCKS5代理..."
+    yum install -y epel-release
+    yum install -y shadowsocks
+
     if [ $? -ne 0 ]; then
-        echo "Dante安装失败，请检查网络或yum源"
+        echo "Shadowsocks安装失败，请检查网络或yum源"
         exit 1
     fi
 
-    # 写入Dante配置文件
-    cat <<EOF >/etc/sockd.conf
-logoutput: /var/log/sockd.log
-internal: 0.0.0.0 port = $SOCKS5_PORT
-external: 154.26.189.56
-method: username
-user.privileged: root
-user.unprivileged: nobody
-clientmethod: none
-client pass {
-    from: 0.0.0.0/0 to: 0.0.0.0/0
-    log: connect error
-}
-pass {
-    from: 0.0.0.0/0 to: 0.0.0.0/0
-    command: bind connect udpassociate
-    log: connect error
-    method: username
-    protocol: tcp
+    # 写入Shadowsocks配置文件
+    cat <<EOF >/etc/shadowsocks.json
+{
+    "server": "0.0.0.0",
+    "server_port": $SOCKS5_PORT,
+    "local_address": "127.0.0.1",
+    "local_port": 1080,
+    "password": "$PASSWORD",
+    "timeout": 300,
+    "method": "aes-256-cfb"
 }
 EOF
 
-    # 设置用户认证
-    echo "$USERNAME:$PASSWORD" > /etc/passwd-sockd
-    chmod 600 /etc/passwd-sockd
-
-    # 启动Dante服务
-    systemctl restart sockd
-    systemctl enable sockd
-    if systemctl is-active sockd >/dev/null 2>&1; then
-        echo "Dante已成功启动，监听端口：$SOCKS5_PORT，用户：$USERNAME，密码：$PASSWORD"
+    # 启动Shadowsocks服务
+    systemctl restart shadowsocks
+    systemctl enable shadowsocks
+    if systemctl is-active shadowsocks >/dev/null 2>&1; then
+        echo "Shadowsocks已成功启动，监听端口：$SOCKS5_PORT，用户：$USERNAME，密码：$PASSWORD"
     else
-        echo "Dante启动失败，请检查日志：/var/log/sockd.log"
+        echo "Shadowsocks启动失败，请检查日志：/var/log/shadowsocks/"
         exit 1
     fi
 }
