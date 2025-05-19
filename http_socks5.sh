@@ -172,4 +172,4 @@ main() {
     echo "请确保DMIT安全组已开放端口 $HTTP_PORT 和 $SOCKS_PORT"
 }
 
-main游戏打不开请安装3DM游戏运行库合集离线安装包：http://dl.3dmgame.com/201511/89066.html
+main
