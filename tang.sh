@@ -9,7 +9,7 @@ if [ -z "$USERNAME" ]; then
     echo "用户名不能为空，程序退出。"
     exit 1
 fi
-
+pause
 echo "请输入HTTP代理的密码："
 read -s PASSWORD
 
@@ -18,7 +18,7 @@ if [ -z "$PASSWORD" ]; then
     echo "密码不能为空，程序退出。"
     exit 1
 fi
-
+pause
 # 定义端口
 HTTP_PORT=56666
 
