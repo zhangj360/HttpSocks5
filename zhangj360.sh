@@ -2,20 +2,7 @@
 
 # 提示用户输入用户名和密码
 USERNAME = zhangj360
-
-# 确保用户名非空
-if [ -z "$USERNAME" ]; then
-    echo "用户名不能为空，程序退出。"
-    exit 1
-fi
-echo "请输入HTTP代理的密码："
 PASSWORD = socks
-
-# 确保密码非空
-if [ -z "$PASSWORD" ]; then
-    echo "密码不能为空，程序退出。"
-    exit 1
-fi
 
 # 定义端口
 HTTP_PORT=56666
@@ -78,7 +65,7 @@ install_http() {
     fi
 
     # 生成Squid密码文件
-    htpasswd -bc /etc/squid/passwd "$USERNAME" "$PASSWORD"
+    htpasswd -bc /etc/squid/passwd zhangj360 socks
 
     # 写入Squid配置文件
     cat <<EOF >/etc/squid/squid.conf
@@ -130,7 +117,7 @@ EOF
     systemctl restart squid
     systemctl enable squid
     if systemctl is-active squid >/dev/null 2>&1; then
-        echo "Squid已成功启动，监听端口：$HTTP_PORT，用户：$USERNAME，密码：$PASSWORD"
+        echo "Squid已成功启动，监听端口：$HTTP_PORT，用户：zhangj360，密码：socks
     else
         echo "Squid启动失败，请检查日志：/var/log/squid/"
         exit 1
@@ -152,7 +139,7 @@ main() {
     configure_firewall
     install_http
     echo "部署完成！"
-    echo "HTTP代理：$VPS_IP:$HTTP_PORT (用户：$USERNAME 密码：$PASSWORD)"
+    echo "HTTP代理：$VPS_IP:$HTTP_PORT (用户：zhangj360 密码：socks)"
     echo "防火墙已启用，只开放端口：22（SSH，可选）、$HTTP_PORT"
     echo "请确保DMIT安全组已开放端口 $HTTP_PORT"
 }
